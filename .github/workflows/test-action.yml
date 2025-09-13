@@ -1,0 +1,22 @@
+name: Test Action
+
+on:
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Test action
+      uses: ./
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        require_assignee: 'false'
+        close_pr_on_failure: 'false'
+        no_issue_message: 'Test: This PR must be linked to an issue.'
+        assignee_mismatch_message: 'Test: The linked issue must be assigned to the PR author.'
