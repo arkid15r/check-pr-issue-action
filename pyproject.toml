@@ -9,23 +9,18 @@ where = ["src"]
 name = "check-pr-issue-action"
 version = "0.1.0"
 description = "GitHub Action to validate PR-issue relationships"
-authors = [{name = "arkid15r", email = "arkid15r@users.noreply.github.com"}]
+authors = [{ name = "arkid15r", email = "arkid15r@users.noreply.github.com" }]
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "PyGithub==1.59.1",
-]
+dependencies = ["PyGithub==1.59.1"]
 
 [project.scripts]
 check-pr-issue-action = "check_pr_issue_action.main:main"
 
-[project.optional-dependencies]
-dev = [
-    "pytest==7.4.3",
-    "pytest-cov==4.1.0",
-    "ruff==0.1.6",
-    "pre-commit==3.5.0",
-]
+[tool.poetry.group.dev.dependencies]
+pytest = "7.4.3"
+pytest-cov = "4.1.0"
+pre-commit = "3.5.0"
 
 [tool.ruff]
 target-version = "py311"
@@ -42,8 +37,8 @@ select = [
     "UP", # pyupgrade
 ]
 ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
 ]
 
 [tool.ruff.lint.isort]
@@ -63,12 +58,7 @@ addopts = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = [
-    "tests/*",
-    "venv/*",
-    ".venv/*",
-    "*/site-packages/*",
-]
+omit = ["tests/*", "venv/*", ".venv/*", "*/site-packages/*"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -83,3 +73,4 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+ruff = "0.1.6"
