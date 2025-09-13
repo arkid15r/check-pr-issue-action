@@ -1,7 +1,7 @@
 """Pytest configuration and fixtures for check-pr-issue-action tests."""
 
-import sys
 from pathlib import Path
+import sys
 from unittest.mock import Mock
 
 import pytest

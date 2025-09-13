@@ -5,24 +5,23 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install production dependencies
-	pip install -r requirements.txt
+	poetry install --only main
 
 install-dev: ## Install development dependencies
-	pip install -e .
-	pip install -r requirements-dev.txt
-	pre-commit install
+	poetry install --with dev
+	poetry run pre-commit install
 
 test: ## Run tests
-	python -m pytest
+	poetry run pytest
 
 test-cov: ## Run tests with coverage
-	python -m pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=90
+	poetry run pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=90
 
 lint: ## Run linting
-	ruff check .
+	poetry run ruff check .
 
 format: ## Format code
-	ruff format .
+	poetry run ruff format .
 
 check: lint test ## Run linting and tests
 

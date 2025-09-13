@@ -72,11 +72,38 @@ These permissions are automatically included in the action definition, but you m
 ### Setup
 
 ```bash
+# Install pipx and Poetry (if not already installed)
+python -m pip install --user pipx
+python -m pipx ensurepath
+pipx install poetry
+
 # Install development dependencies (includes package in editable mode)
 make install-dev
 
 # Install pre-commit hooks
 make pre-commit
+```
+
+### Poetry Commands
+
+```bash
+# Install all dependencies (production + development)
+poetry install --with dev
+
+# Install only production dependencies
+poetry install --only main
+
+# Run tests
+poetry run pytest
+
+# Run linting
+poetry run ruff check .
+
+# Format code
+poetry run ruff format .
+
+# Run all checks
+make check
 ```
 
 ### Testing the Action
