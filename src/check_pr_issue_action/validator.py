@@ -84,7 +84,9 @@ class PrValidator:
                 is_valid=False, reason="Error checking issue linking"
             )
 
-    def _validate_assignee(self, pr: PullRequest, issue: GitHubIssue) -> ValidationResult:
+    def _validate_assignee(
+        self, pr: PullRequest, issue: GitHubIssue
+    ) -> ValidationResult:
         """Validate that issue assignee matches PR author."""
         if not issue:
             return ValidationResult(is_valid=False, reason="No issue to check assignee")

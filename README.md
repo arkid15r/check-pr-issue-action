@@ -57,6 +57,16 @@ jobs:
 | `no_issue_message` | Error message when PR has no linked issue | No | `'This PR must be linked to an issue before it can be merged.'` |
 | `assignee_mismatch_message` | Error message when assignee doesn't match PR author | No | `'The linked issue must be assigned to the PR author before this PR can be merged.'` |
 
+## Required Permissions
+
+This action requires the following GitHub permissions:
+
+- **`pull-requests: write`** - To close PRs and post comments
+- **`issues: read`** - To access linked issue information and assignees
+- **`contents: read`** - To read repository contents (standard permission)
+
+These permissions are automatically included in the action definition, but you may need to ensure your workflow has sufficient permissions if using a custom token.
+
 ## Development
 
 ### Setup

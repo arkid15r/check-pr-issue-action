@@ -13,10 +13,10 @@ install-dev: ## Install development dependencies
 	pre-commit install
 
 test: ## Run tests
-	pytest
+	python -m pytest
 
 test-cov: ## Run tests with coverage
-	pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=90
+	python -m pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=90
 
 lint: ## Run linting
 	ruff check .
