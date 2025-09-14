@@ -16,11 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: debug
 
     - name: Test action
-      uses: ./
+      uses: arkid15r/check-pr-issue-action@debug
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         require_assignee: 'false'
