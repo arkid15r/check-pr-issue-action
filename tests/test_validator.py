@@ -37,11 +37,13 @@ class TestPrValidator:
                     "repository": {
                         "pullRequest": {
                             "closingIssuesReferences": {
-                                "nodes": [
+                                "edges": [
                                     {
-                                        "number": 456,
-                                        "title": "Test Issue",
-                                        "url": "https://github.com/testowner/testrepo/issues/456",
+                                        "node": {
+                                            "number": 456,
+                                            "title": "Test Issue",
+                                            "url": "https://github.com/testowner/testrepo/issues/456",
+                                        }
                                     }
                                 ]
                             }
@@ -69,7 +71,7 @@ class TestPrValidator:
             {
                 "data": {
                     "repository": {
-                        "pullRequest": {"closingIssuesReferences": {"nodes": []}}
+                        "pullRequest": {"closingIssuesReferences": {"edges": []}}
                     }
                 }
             },
@@ -113,11 +115,13 @@ class TestPrValidator:
                     "repository": {
                         "pullRequest": {
                             "closingIssuesReferences": {
-                                "nodes": [
+                                "edges": [
                                     {
-                                        "number": 456,
-                                        "title": "Test Issue",
-                                        "url": "https://github.com/testowner/testrepo/issues/456",
+                                        "node": {
+                                            "number": 456,
+                                            "title": "Test Issue",
+                                            "url": "https://github.com/testowner/testrepo/issues/456",
+                                        }
                                     }
                                 ]
                             }
@@ -147,11 +151,13 @@ class TestPrValidator:
                     "repository": {
                         "pullRequest": {
                             "closingIssuesReferences": {
-                                "nodes": [
+                                "edges": [
                                     {
-                                        "number": 456,
-                                        "title": "Test Issue",
-                                        "url": "https://github.com/testowner/testrepo/issues/456",
+                                        "node": {
+                                            "number": 456,
+                                            "title": "Test Issue",
+                                            "url": "https://github.com/testowner/testrepo/issues/456",
+                                        }
                                     }
                                 ]
                             }
@@ -184,11 +190,13 @@ class TestPrValidator:
                     "repository": {
                         "pullRequest": {
                             "closingIssuesReferences": {
-                                "nodes": [
+                                "edges": [
                                     {
-                                        "number": 456,
-                                        "title": "Test Issue",
-                                        "url": "https://github.com/testowner/testrepo/issues/456",
+                                        "node": {
+                                            "number": 456,
+                                            "title": "Test Issue",
+                                            "url": "https://github.com/testowner/testrepo/issues/456",
+                                        }
                                     }
                                 ]
                             }

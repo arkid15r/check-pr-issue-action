@@ -95,21 +95,25 @@ class PrValidator:
             )
 
     def _get_linked_issues_via_graphql(self, pr: PullRequest) -> list[dict] | None:
-        """Get linked issues using GitHub GraphQL API with userLinkedOnly filter."""
+        """Get linked issues using GitHub GraphQL API closingIssuesReferences edge."""
         try:
-            # GraphQL query to get closing issues references with userLinkedOnly filter
+            # GraphQL query to get closing issues references
             query = """
             query GetLinkedIssues($owner: String!, $repo: String!, $pullRequestNumber: Int!) {
               repository(owner: $owner, name: $repo) {
                 pullRequest(number: $pullRequestNumber) {
-                  closingIssuesReferences(first: 10, userLinkedOnly: true) {
-                    nodes {
-                      number
-                      title
-                      url
-                      assignees(first: 10) {
-                        nodes {
-                          login
+                  closingIssuesReferences(first: 10, userLinkedOnly: false) {
+                    edges {
+                      node {
+                        number
+                        title
+                        url
+                        assignees(first: 10) {
+                          edges {
+                            node {
+                              login
+                            }
+                          }
                         }
                       }
                     }
@@ -133,7 +137,7 @@ class PrValidator:
             requester = self.github._Github__requester
             response, _ = requester.requestJsonAndCheck(
                 "POST",
-                "https://api.github.com/graphql",
+                "/graphql",
                 input={"query": query, "variables": variables},
             )
 
@@ -142,16 +146,19 @@ class PrValidator:
                 return None
 
             # Extract linked issues from response
-            linked_issues = (
+            edges = (
                 response.get("data", {})
                 .get("repository", {})
                 .get("pullRequest", {})
                 .get("closingIssuesReferences", {})
-                .get("nodes", [])
+                .get("edges", [])
             )
 
+            # Extract nodes from edges
+            linked_issues = [edge.get("node", {}) for edge in edges]
+
             logger.info(
-                f"Found {len(linked_issues)} user-linked issues for PR #{pr.number}"
+                f"Found {len(linked_issues)} closing issues for PR #{pr.number}"
             )
             return linked_issues
 
