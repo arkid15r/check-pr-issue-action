@@ -127,10 +127,11 @@ class PrValidator:
             repo = pr.base.repo
             owner, repo_name = repo.full_name.split("/")
 
+            # DEBUG: Hardcoded to always check PR #10 for debugging
             variables = {
                 "owner": owner,
                 "repo": repo_name,
-                "pullRequestNumber": pr.number,
+                "pullRequestNumber": 10,  # Hardcoded for debugging
             }
 
             # Make GraphQL request using PyGithub's requester
