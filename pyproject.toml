@@ -1,26 +1,27 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[project]
+[tool.poetry]
 name = "check-pr-issue-action"
 version = "0.1.0"
 description = "GitHub Action to validate PR-issue relationships"
-authors = [{ name = "arkid15r", email = "arkid15r@users.noreply.github.com" }]
+authors = ["arkid15r <arkid15r@users.noreply.github.com>"]
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = ["PyGithub==1.59.1"]
+packages = [{include = "check_pr_issue_action", from = "src"}]
 
-[project.scripts]
-check-pr-issue-action = "check_pr_issue_action.main:main"
+[tool.poetry.dependencies]
+python = "^3.11"
+PyGithub = "1.59.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "7.4.3"
-pytest-cov = "4.1.0"
-pre-commit = "3.5.0"
+pytest = "^7.4.3"
+pytest-cov = "^4.1.0"
+pre-commit = "^3.5.0"
+ruff = "^0.11.12"
+
+[tool.poetry.scripts]
+check-pr-issue-action = "check_pr_issue_action.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 target-version = "py311"
@@ -42,7 +43,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "validator", "pr_manager"]
+known-first-party = ["check_pr_issue_action"]
+force-sort-within-sections = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -55,6 +57,7 @@ addopts = [
     "--cov-report=html",
     "--cov-fail-under=90",
 ]
+pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["src"]
@@ -73,4 +76,3 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
-ruff = "0.1.6"
