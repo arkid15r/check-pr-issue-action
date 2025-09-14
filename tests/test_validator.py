@@ -29,7 +29,7 @@ class TestPrValidator:
         self, mock_github_client, mock_config, mock_pr, mock_issue_with_assignee
     ):
         """Test validation of PR with properly linked issue and matching assignee."""
-        mock_pr.issue.return_value = mock_issue_with_assignee
+        mock_pr.as_issue.return_value = mock_issue_with_assignee
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
 
@@ -41,7 +41,7 @@ class TestPrValidator:
         self, mock_github_client, mock_config, mock_pr
     ):
         """Test validation of PR with no linked issue."""
-        mock_pr.issue.return_value = None
+        mock_pr.as_issue.return_value = None
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
 
@@ -52,7 +52,7 @@ class TestPrValidator:
         self, mock_github_client, mock_config, mock_pr
     ):
         """Test handling of error when checking issue linking."""
-        mock_pr.issue.side_effect = Exception("API Error")
+        mock_pr.as_issue.side_effect = Exception("API Error")
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
 
@@ -67,7 +67,7 @@ class TestPrValidator:
         mock_issue_with_different_assignee,
     ):
         """Test validation when assignee doesn't match PR author."""
-        mock_pr.issue.return_value = mock_issue_with_different_assignee
+        mock_pr.as_issue.return_value = mock_issue_with_different_assignee
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
 
@@ -79,7 +79,7 @@ class TestPrValidator:
         self, mock_github_client, mock_config, mock_pr, mock_issue
     ):
         """Test validation when issue has no assignee."""
-        mock_pr.issue.return_value = mock_issue
+        mock_pr.as_issue.return_value = mock_issue
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
 
@@ -94,7 +94,7 @@ class TestPrValidator:
         mock_config = Mock()
         mock_config.skip_users = []
         mock_config.require_assignee = False
-        mock_pr.issue.return_value = mock_issue
+        mock_pr.as_issue.return_value = mock_issue
 
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)

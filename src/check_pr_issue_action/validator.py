@@ -70,8 +70,8 @@ class PrValidator:
     def _validate_issue_linking(self, pr: PullRequest) -> ValidationResult:
         """Validate that PR is linked to an issue."""
         try:
-            # Get the issue associated with the PR
-            issue = pr.issue()
+            # Get the issue associated with the PR using as_issue() method
+            issue = pr.as_issue()
             if issue:
                 logger.info(f"PR #{pr.number} is linked to issue #{issue.number}")
                 return ValidationResult(is_valid=True, issue=issue)
