@@ -26,4 +26,5 @@ COPY . .
 RUN poetry install --only main
 
 # Set entrypoint
-CMD ["poetry", "run", "python", "-m", "check_pr_issue_action.main"]
+ENV PYTHONPATH=/action/src
+CMD ["poetry", "run", "python", "src/check_pr_issue_action/main.py"]

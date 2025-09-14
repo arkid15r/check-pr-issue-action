@@ -8,9 +8,9 @@ import sys
 
 from github import Github
 
-from .config import Config
-from .pr_manager import PrManager
-from .validator import PrValidator
+from check_pr_issue_action.config import Config
+from check_pr_issue_action.pr_manager import PrManager
+from check_pr_issue_action.validator import PrValidator
 
 # Set up logging
 logging.basicConfig(
