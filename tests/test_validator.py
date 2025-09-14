@@ -32,7 +32,8 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {
+            {},  # headers
+            {  # response
                 "data": {
                     "repository": {
                         "pullRequest": {
@@ -51,7 +52,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue_with_assignee
         validator = PrValidator(mock_github_client, mock_config)
@@ -68,14 +68,14 @@ class TestPrValidator:
         # Mock GraphQL response with no linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {
+            {},  # headers
+            {  # response
                 "data": {
                     "repository": {
                         "pullRequest": {"closingIssuesReferences": {"edges": []}}
                     }
                 }
             },
-            None,
         )
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
@@ -90,8 +90,8 @@ class TestPrValidator:
         # Mock GraphQL response with errors
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {"errors": [{"message": "GraphQL API Error"}]},
-            None,
+            {},  # headers
+            {"errors": [{"message": "GraphQL API Error"}]},  # response
         )
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
@@ -110,7 +110,8 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {
+            {},  # headers
+            {  # response
                 "data": {
                     "repository": {
                         "pullRequest": {
@@ -129,7 +130,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue_with_different_assignee
         validator = PrValidator(mock_github_client, mock_config)
@@ -146,7 +146,8 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {
+            {},  # headers
+            {  # response
                 "data": {
                     "repository": {
                         "pullRequest": {
@@ -165,7 +166,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue
         validator = PrValidator(mock_github_client, mock_config)
@@ -185,7 +185,8 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {
+            {},  # headers
+            {  # response
                 "data": {
                     "repository": {
                         "pullRequest": {
@@ -204,7 +205,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue
 

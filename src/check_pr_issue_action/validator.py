@@ -136,7 +136,7 @@ class PrValidator:
 
             # Make GraphQL request using PyGithub's requester
             requester = self.github._Github__requester
-            response, _ = requester.requestJsonAndCheck(
+            headers, response = requester.requestJsonAndCheck(
                 "POST",
                 "/graphql",
                 input={"query": query, "variables": variables},
@@ -145,6 +145,7 @@ class PrValidator:
             # Verbose logging for debugging
             logger.info(f"GraphQL query: {query}")
             logger.info(f"GraphQL variables: {variables}")
+            logger.info(f"GraphQL headers: {headers}")
             logger.info(f"GraphQL response: {response}")
 
             if "errors" in response:
