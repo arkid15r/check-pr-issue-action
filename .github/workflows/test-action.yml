@@ -22,7 +22,7 @@ jobs:
       uses: arkid15r/check-pr-issue-action@debug
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        require_assignee: 'false'
+        require_assignee: 'true'
         close_pr_on_failure: 'false'
         no_issue_message: 'Test: This PR must be linked to an issue.'
         assignee_mismatch_message: 'Test: The linked issue must be assigned to the PR author.'
