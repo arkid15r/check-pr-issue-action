@@ -24,7 +24,7 @@ RUN poetry config virtualenvs.in-project true
 COPY . .
 
 # Install dependencies and package
-RUN poetry install --only main
+RUN poetry install --no-root --without dev
 
 # Set entrypoint
 ENV PYTHONPATH=/action/src
