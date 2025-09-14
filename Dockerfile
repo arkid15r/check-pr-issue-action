@@ -7,18 +7,26 @@ RUN apk add --no-cache \
     libffi-dev \
     openssl-dev
 
+# Install Poetry directly
+RUN pip install poetry
+
 # Set working directory
 WORKDIR /action
 
-# Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy Poetry configuration files
+COPY pyproject.toml poetry.lock ./
+
+# Configure Poetry
+RUN poetry config virtualenvs.create true
+
+# Install dependencies only (no root package)
+RUN poetry install --only main --no-root
 
 # Copy action code
 COPY . .
 
-# Install the package in editable mode
-RUN pip install -e .
+# Install the current project
+RUN poetry install --only main
 
 # Set entrypoint
-ENTRYPOINT ["python", "-m", "check_pr_issue_action.main"]
+CMD ["poetry", "run", "python", "-m", "check_pr_issue_action.main"]
