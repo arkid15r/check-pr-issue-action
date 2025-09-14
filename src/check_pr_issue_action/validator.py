@@ -68,14 +68,19 @@ class PrValidator:
         )
 
     def _validate_issue_linking(self, pr: PullRequest) -> ValidationResult:
-        """Validate that PR is linked to an issue."""
+        """Validate that PR is linked to an issue using GraphQL API."""
         try:
-            # Parse PR description and commits for linked issues
-            linked_issue_numbers = self._find_linked_issues(pr)
+            # Get linked issues using GraphQL API
+            linked_issues = self._get_linked_issues_via_graphql(pr)
 
-            if linked_issue_numbers:
+            if linked_issues is None:
+                # GraphQL error occurred
+                return ValidationResult(
+                    is_valid=False, reason="Error checking issue linking"
+                )
+            elif linked_issues:
                 # Get the first linked issue
-                issue_number = linked_issue_numbers[0]
+                issue_number = linked_issues[0]["number"]
                 repo = pr.base.repo
                 issue = repo.get_issue(issue_number)
                 logger.info(f"PR #{pr.number} is linked to issue #{issue.number}")
@@ -89,30 +94,70 @@ class PrValidator:
                 is_valid=False, reason="Error checking issue linking"
             )
 
-    def _find_linked_issues(self, pr: PullRequest) -> list[int]:
-        """Find issue numbers mentioned in PR description and commits."""
-        import re
-
-        linked_issues = []
-
-        # Pattern to match: closes #123, fixes #456, resolves #789, closed #123, fixed #456, resolved #789, etc.
-        pattern = r"(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)"
-
-        # Check PR description
-        if pr.body:
-            matches = re.findall(pattern, pr.body, re.IGNORECASE)
-            linked_issues.extend([int(match) for match in matches])
-
-        # Check commit messages
+    def _get_linked_issues_via_graphql(self, pr: PullRequest) -> list[dict] | None:
+        """Get linked issues using GitHub GraphQL API with userLinkedOnly filter."""
         try:
-            for commit in pr.get_commits():
-                if commit.commit.message:
-                    matches = re.findall(pattern, commit.commit.message, re.IGNORECASE)
-                    linked_issues.extend([int(match) for match in matches])
-        except Exception as e:
-            logger.warning(f"Could not check commit messages: {e}")
+            # GraphQL query to get closing issues references with userLinkedOnly filter
+            query = """
+            query GetLinkedIssues($owner: String!, $repo: String!, $pullRequestNumber: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $pullRequestNumber) {
+                  closingIssuesReferences(first: 10, userLinkedOnly: true) {
+                    nodes {
+                      number
+                      title
+                      url
+                      assignees(first: 10) {
+                        nodes {
+                          login
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
 
-        return list(set(linked_issues))  # Remove duplicates
+            # Extract repository owner and name from PR
+            repo = pr.base.repo
+            owner, repo_name = repo.full_name.split("/")
+
+            variables = {
+                "owner": owner,
+                "repo": repo_name,
+                "pullRequestNumber": pr.number,
+            }
+
+            # Make GraphQL request using PyGithub's requester
+            requester = self.github._Github__requester
+            response, _ = requester.requestJsonAndCheck(
+                "POST",
+                "https://api.github.com/graphql",
+                input={"query": query, "variables": variables},
+            )
+
+            if "errors" in response:
+                logger.error(f"GraphQL errors: {response['errors']}")
+                return None
+
+            # Extract linked issues from response
+            linked_issues = (
+                response.get("data", {})
+                .get("repository", {})
+                .get("pullRequest", {})
+                .get("closingIssuesReferences", {})
+                .get("nodes", [])
+            )
+
+            logger.info(
+                f"Found {len(linked_issues)} user-linked issues for PR #{pr.number}"
+            )
+            return linked_issues
+
+        except Exception as e:
+            logger.error(f"Error fetching linked issues via GraphQL: {e}")
+            return None
 
     def _validate_assignee(
         self, pr: PullRequest, issue: GitHubIssue
