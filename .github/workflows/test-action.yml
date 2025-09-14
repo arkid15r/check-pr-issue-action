@@ -23,6 +23,6 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         require_assignee: 'true'
-        close_pr_on_failure: 'false'
+        close_pr_on_failure: 'true'
         no_issue_message: 'Test: This PR must be linked to an issue.'
         assignee_mismatch_message: 'Test: The linked issue must be assigned to the PR author.'
