@@ -97,7 +97,6 @@ class PrValidator:
     def _get_linked_issues_via_graphql(self, pr: PullRequest) -> list[dict] | None:
         """Get linked issues using GitHub GraphQL API closingIssuesReferences edge."""
         try:
-            # GraphQL query to get closing issues references
             query = """
             query GetLinkedIssues($owner: String!, $repo: String!, $pullRequestNumber: Int!) {
               repository(owner: $owner, name: $repo) {
@@ -127,11 +126,10 @@ class PrValidator:
             repo = pr.base.repo
             owner, repo_name = repo.full_name.split("/")
 
-            # DEBUG: Hardcoded to always check PR #10 for debugging
             variables = {
                 "owner": owner,
                 "repo": repo_name,
-                "pullRequestNumber": 10,  # Hardcoded for debugging
+                "pullRequestNumber": pr.number,
             }
 
             # Make GraphQL request using PyGithub's requester
@@ -142,37 +140,23 @@ class PrValidator:
                 input={"query": query, "variables": variables},
             )
 
-            # Verbose logging for debugging
-            logger.info(f"GraphQL query: {query}")
-            logger.info(f"GraphQL variables: {variables}")
-            logger.info(f"GraphQL headers: {headers}")
-            logger.info(f"GraphQL response: {response}")
-
             if "errors" in response:
                 logger.error(f"GraphQL errors: {response['errors']}")
                 return None
 
             # Extract linked issues from response
-            data = response.get("data", {})
-            repository = data.get("repository", {})
-            pull_request = repository.get("pullRequest", {})
-            closing_issues_refs = pull_request.get("closingIssuesReferences", {})
-            edges = closing_issues_refs.get("edges", [])
-
-            logger.info(
-                f"Data structure: data={bool(data)}, repository={bool(repository)}, pullRequest={bool(pull_request)}"
-            )
-            logger.info(f"closingIssuesReferences: {closing_issues_refs}")
-            logger.info(f"edges: {edges}")
-
-            # Extract nodes from edges
-            linked_issues = [edge.get("node", {}) for edge in edges]
+            linked_issues = [
+                edge.get("node", {})
+                for edge in response.get("data", {})
+                .get("repository", {})
+                .get("pullRequest", {})
+                .get("closingIssuesReferences", {})
+                .get("edges", [])
+            ]
 
             logger.info(
                 f"Found {len(linked_issues)} closing issues for PR #{pr.number}"
             )
-            if linked_issues:
-                logger.info(f"Linked issues: {linked_issues}")
             return linked_issues
 
         except Exception as e:
@@ -194,7 +178,7 @@ class PrValidator:
             )
 
         pr_author = pr.user.login
-        assignee_logins = [assignee.login for assignee in assignees]
+        assignee_logins = {assignee.login for assignee in assignees}
 
         if pr_author in assignee_logins:
             logger.info(
