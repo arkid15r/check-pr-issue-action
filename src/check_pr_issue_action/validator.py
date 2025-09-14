@@ -70,9 +70,14 @@ class PrValidator:
     def _validate_issue_linking(self, pr: PullRequest) -> ValidationResult:
         """Validate that PR is linked to an issue."""
         try:
-            # Get the issue associated with the PR using as_issue() method
-            issue = pr.as_issue()
-            if issue:
+            # Parse PR description and commits for linked issues
+            linked_issue_numbers = self._find_linked_issues(pr)
+
+            if linked_issue_numbers:
+                # Get the first linked issue
+                issue_number = linked_issue_numbers[0]
+                repo = pr.base.repo
+                issue = repo.get_issue(issue_number)
                 logger.info(f"PR #{pr.number} is linked to issue #{issue.number}")
                 return ValidationResult(is_valid=True, issue=issue)
             else:
@@ -83,6 +88,31 @@ class PrValidator:
             return ValidationResult(
                 is_valid=False, reason="Error checking issue linking"
             )
+
+    def _find_linked_issues(self, pr: PullRequest) -> list[int]:
+        """Find issue numbers mentioned in PR description and commits."""
+        import re
+
+        linked_issues = []
+
+        # Pattern to match: closes #123, fixes #456, resolves #789, closed #123, fixed #456, resolved #789, etc.
+        pattern = r"(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)"
+
+        # Check PR description
+        if pr.body:
+            matches = re.findall(pattern, pr.body, re.IGNORECASE)
+            linked_issues.extend([int(match) for match in matches])
+
+        # Check commit messages
+        try:
+            for commit in pr.get_commits():
+                if commit.commit.message:
+                    matches = re.findall(pattern, commit.commit.message, re.IGNORECASE)
+                    linked_issues.extend([int(match) for match in matches])
+        except Exception as e:
+            logger.warning(f"Could not check commit messages: {e}")
+
+        return list(set(linked_issues))  # Remove duplicates
 
     def _validate_assignee(
         self, pr: PullRequest, issue: GitHubIssue
