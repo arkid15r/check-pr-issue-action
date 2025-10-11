@@ -150,18 +150,26 @@ class PrValidator:
                 return None
 
             # Extract linked issues from response
-            linked_issues = [
-                edge.get("node", {})
-                for edge in response.get("data", {})
-                .get("repository", {})
-                .get("pullRequest", {})
-                .get("closingIssuesReferences", {})
-                .get("edges", [])
-            ]
+            data = response.get("data", {})
+            repository = data.get("repository", {})
+            pull_request = repository.get("pullRequest", {})
+            closing_issues_refs = pull_request.get("closingIssuesReferences", {})
+            edges = closing_issues_refs.get("edges", [])
+
+            logger.info(
+                f"Data structure: data={bool(data)}, repository={bool(repository)}, pullRequest={bool(pull_request)}"
+            )
+            logger.info(f"closingIssuesReferences: {closing_issues_refs}")
+            logger.info(f"edges: {edges}")
+
+            # Extract nodes from edges
+            linked_issues = [edge.get("node", {}) for edge in edges]
 
             logger.info(
                 f"Found {len(linked_issues)} closing issues for PR #{pr.number}"
             )
+            if linked_issues:
+                logger.info(f"Linked issues: {linked_issues}")
             return linked_issues
 
         except Exception as e:
