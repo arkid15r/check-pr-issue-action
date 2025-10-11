@@ -14,8 +14,10 @@ def mock_config():
     config.skip_users = ["testuser1", "testuser2"]
     config.require_assignee = True
     config.close_pr_on_failure = True
-    config.no_issue_message = "Test no issue message"
-    config.assignee_mismatch_message = "Test assignee mismatch message"
+    config.no_issue_message = "No issue message"
+    config.no_assignee_message = "No assignee message"
+    config.target_branches = []
+    config.invalid_branch_message = "Invalid branch message"
     return config
 
 
@@ -32,6 +34,8 @@ def mock_pr():
     pr.number = 123
     pr.user.login = "testuser"
     pr.user.type = "User"
+    pr.base.ref = "main"
+    pr.base.repo.default_branch = "main"
     return pr
 
 
