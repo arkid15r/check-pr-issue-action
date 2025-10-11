@@ -32,6 +32,7 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
             {
                 "data": {
                     "repository": {
@@ -51,7 +52,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue_with_assignee
         validator = PrValidator(mock_github_client, mock_config)
@@ -68,6 +68,7 @@ class TestPrValidator:
         # Mock GraphQL response with no linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
             {
                 "data": {
                     "repository": {
@@ -75,7 +76,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
@@ -90,8 +90,8 @@ class TestPrValidator:
         # Mock GraphQL response with errors
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
             {"errors": [{"message": "GraphQL API Error"}]},
-            None,
         )
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
@@ -110,6 +110,7 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
             {
                 "data": {
                     "repository": {
@@ -129,7 +130,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue_with_different_assignee
         validator = PrValidator(mock_github_client, mock_config)
@@ -146,6 +146,7 @@ class TestPrValidator:
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
             {
                 "data": {
                     "repository": {
@@ -165,7 +166,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue
         validator = PrValidator(mock_github_client, mock_config)
@@ -182,9 +182,11 @@ class TestPrValidator:
         mock_config = Mock()
         mock_config.skip_users = []
         mock_config.require_assignee = False
+        mock_config.target_branches = []
         # Mock GraphQL response for linked issues
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
             {
                 "data": {
                     "repository": {
@@ -204,7 +206,6 @@ class TestPrValidator:
                     }
                 }
             },
-            None,
         )
         mock_pr.base.repo.get_issue.return_value = mock_issue
 
@@ -229,6 +230,117 @@ class TestPrValidator:
 
         assert result.is_valid is False
         assert result.reason == "Error checking issue linking"
+
+    def test_validate_target_branch_no_restrictions(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Test branch validation when no target branches are configured."""
+        mock_config.target_branches = []
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator._validate_target_branch(mock_pr)
+
+        assert result.is_valid is True
+        assert result.reason == "No branch restrictions"
+
+    def test_validate_target_branch_allowed(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Test branch validation when PR targets an allowed branch."""
+        mock_config.target_branches = ["main", "develop", "feature-branch"]
+        mock_pr.base.ref = "develop"
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator._validate_target_branch(mock_pr)
+
+        assert result.is_valid is True
+        assert result.reason == "Target branch allowed"
+
+    def test_validate_target_branch_not_allowed(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Test branch validation when PR targets a disallowed branch."""
+        mock_config.target_branches = ["develop", "release"]
+        mock_pr.base.ref = "feature-branch"
+        # Set default branch to "main" (different from target_branches)
+        mock_pr.base.repo.default_branch = "main"
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator._validate_target_branch(mock_pr)
+
+        assert result.is_valid is False
+        assert "PR must target one of the allowed branches" in result.reason
+        # Should include both the configured branches and the default branch
+        assert "develop" in result.reason
+        assert "release" in result.reason
+        assert "main" in result.reason
+
+    def test_validate_target_branch_default_included(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Test that default branch is automatically included in allowed branches."""
+        mock_config.target_branches = ["develop", "release"]
+        mock_pr.base.ref = "main"  # PR targets default branch
+        mock_pr.base.repo.default_branch = "main"
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator._validate_target_branch(mock_pr)
+
+        assert result.is_valid is True
+        assert result.reason == "Target branch allowed"
+
+    def test_validate_pr_with_branch_restriction_allowed(
+        self, mock_github_client, mock_config, mock_pr, mock_issue_with_assignee
+    ):
+        """Test full PR validation with branch restriction when branch is allowed."""
+        mock_config.target_branches = ["main", "develop"]
+        mock_pr.base.ref = "main"
+
+        # Mock GraphQL response for linked issue
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+        mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
+            {
+                "data": {
+                    "repository": {
+                        "pullRequest": {
+                            "closingIssuesReferences": {
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "number": 456,
+                                            "title": "Test Issue",
+                                            "url": "https://github.com/testowner/testrepo/issues/456",
+                                            "assignees": {
+                                                "edges": [
+                                                    {"node": {"login": "testuser"}}
+                                                ]
+                                            },
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+        )
+        mock_pr.base.repo.get_issue.return_value = mock_issue_with_assignee
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is True
+        assert result.reason == "All validations passed"
+
+    def test_validate_pr_with_branch_restriction_not_allowed(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Test full PR validation with branch restriction when branch is not allowed."""
+        mock_config.target_branches = ["main", "develop"]
+        mock_pr.base.ref = "feature-branch"
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is False
+        assert "PR must target one of the allowed branches" in result.reason
 
 
 class TestValidationResult:

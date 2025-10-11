@@ -51,6 +51,11 @@ class PrValidator:
             logger.info(f"Skipping validation for user in skip list: {pr.user.login}")
             return ValidationResult(is_valid=True, reason="User in skip list")
 
+        # Validate target branch
+        branch_result = self._validate_target_branch(pr)
+        if not branch_result.is_valid:
+            return branch_result
+
         # Validate issue linking
         issue_result = self._validate_issue_linking(pr)
         if not issue_result.is_valid:
@@ -97,7 +102,6 @@ class PrValidator:
     def _get_linked_issues_via_graphql(self, pr: PullRequest) -> list[dict] | None:
         """Get linked issues using GitHub GraphQL API closingIssuesReferences edge."""
         try:
-            # GraphQL query to get closing issues references
             query = """
             query GetLinkedIssues($owner: String!, $repo: String!, $pullRequestNumber: Int!) {
               repository(owner: $owner, name: $repo) {
@@ -135,7 +139,7 @@ class PrValidator:
 
             # Make GraphQL request using PyGithub's requester
             requester = self.github._Github__requester
-            response, _ = requester.requestJsonAndCheck(
+            headers, response = requester.requestJsonAndCheck(
                 "POST",
                 "/graphql",
                 input={"query": query, "variables": variables},
@@ -146,13 +150,17 @@ class PrValidator:
                 return None
 
             # Extract linked issues from response
-            edges = (
-                response.get("data", {})
-                .get("repository", {})
-                .get("pullRequest", {})
-                .get("closingIssuesReferences", {})
-                .get("edges", [])
+            data = response.get("data", {})
+            repository = data.get("repository", {})
+            pull_request = repository.get("pullRequest", {})
+            closing_issues_refs = pull_request.get("closingIssuesReferences", {})
+            edges = closing_issues_refs.get("edges", [])
+
+            logger.info(
+                f"Data structure: data={bool(data)}, repository={bool(repository)}, pullRequest={bool(pull_request)}"
             )
+            logger.info(f"closingIssuesReferences: {closing_issues_refs}")
+            logger.info(f"edges: {edges}")
 
             # Extract nodes from edges
             linked_issues = [edge.get("node", {}) for edge in edges]
@@ -160,6 +168,8 @@ class PrValidator:
             logger.info(
                 f"Found {len(linked_issues)} closing issues for PR #{pr.number}"
             )
+            if linked_issues:
+                logger.info(f"Linked issues: {linked_issues}")
             return linked_issues
 
         except Exception as e:
@@ -181,7 +191,7 @@ class PrValidator:
             )
 
         pr_author = pr.user.login
-        assignee_logins = [assignee.login for assignee in assignees]
+        assignee_logins = {assignee.login for assignee in assignees}
 
         if pr_author in assignee_logins:
             logger.info(
@@ -194,4 +204,40 @@ class PrValidator:
             )
             return ValidationResult(
                 is_valid=False, reason="Assignee mismatch", issue=issue
+            )
+
+    def _validate_target_branch(self, pr: PullRequest) -> ValidationResult:
+        """Validate that PR is targeting an allowed branch."""
+        target_branch = pr.base.ref
+        logger.info(f"PR #{pr.number} is targeting branch: {target_branch}")
+
+        # If no target branches configured, allow all branches (default behavior)
+        if not self.config.target_branches:
+            logger.info("No target branches configured, allowing all branches")
+            return ValidationResult(is_valid=True, reason="No branch restrictions")
+
+        # Get the default branch and add it to allowed branches if not already present
+        try:
+            default_branch = pr.base.repo.default_branch
+            allowed_branches = set(self.config.target_branches)
+            if default_branch not in allowed_branches:
+                allowed_branches.add(default_branch)
+                logger.info(
+                    f"Added default branch '{default_branch}' to allowed branches"
+                )
+        except Exception as e:
+            logger.warning(f"Could not get default branch: {e}")
+            allowed_branches = set(self.config.target_branches)
+
+        # Check if target branch is in the allowed list
+        if target_branch in allowed_branches:
+            logger.info(f"Target branch '{target_branch}' is in allowed list")
+            return ValidationResult(is_valid=True, reason="Target branch allowed")
+        else:
+            logger.warning(
+                f"Target branch '{target_branch}' is not in allowed list: {sorted(allowed_branches)}"
+            )
+            return ValidationResult(
+                is_valid=False,
+                reason=f"PR must target one of the allowed branches: {', '.join(sorted(allowed_branches))}",
             )

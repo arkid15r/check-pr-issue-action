@@ -19,15 +19,21 @@ class Config:
             "no_issue_message",
             "This PR must be linked to an issue before it can be merged.",
         )
-        self.assignee_mismatch_message = self._get_input(
-            "assignee_mismatch_message",
+        self.no_assignee_message = self._get_input(
+            "no_assignee_message",
             "The linked issue must be assigned to the PR author before this PR can be merged.",
+        )
+        self.target_branches = self._parse_target_branches()
+        self.invalid_branch_message = self._get_input(
+            "invalid_branch_message",
+            "This PR must target one of the allowed branches.",
         )
 
         logger.info(
             f"Configuration loaded: skip_users={self.skip_users}, "
             f"require_assignee={self.require_assignee}, "
-            f"close_pr_on_failure={self.close_pr_on_failure}"
+            f"close_pr_on_failure={self.close_pr_on_failure}, "
+            f"target_branches={self.target_branches}"
         )
 
     def _get_required_input(self, name: str) -> str:
@@ -55,3 +61,15 @@ class Config:
         users = [user.strip() for user in users_str.split(",") if user.strip()]
         logger.info(f"Skip users configured: {users}")
         return users
+
+    def _parse_target_branches(self) -> list[str]:
+        """Parse newline-separated target branches list."""
+        branches_str = self._get_input("target_branches", "")
+        if not branches_str:
+            return []
+
+        branches = [
+            branch.strip() for branch in branches_str.split("\n") if branch.strip()
+        ]
+        logger.info(f"Target branches configured: {branches}")
+        return branches

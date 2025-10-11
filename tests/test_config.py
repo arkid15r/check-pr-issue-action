@@ -37,7 +37,7 @@ class TestConfig:
                 == "This PR must be linked to an issue before it can be merged."
             )
             assert (
-                config.assignee_mismatch_message
+                config.no_assignee_message
                 == "The linked issue must be assigned to the PR author before this PR can be merged."
             )
 
@@ -82,9 +82,9 @@ class TestConfig:
             {
                 "INPUT_GITHUB_TOKEN": "test_token",
                 "INPUT_NO_ISSUE_MESSAGE": "Custom no issue message",
-                "INPUT_ASSIGNEE_MISMATCH_MESSAGE": "Custom assignee message",
+                "INPUT_NO_ASSIGNEE_MESSAGE": "Custom assignee message",
             },
         ):
             config = Config()
             assert config.no_issue_message == "Custom no issue message"
-            assert config.assignee_mismatch_message == "Custom assignee message"
+            assert config.no_assignee_message == "Custom assignee message"
