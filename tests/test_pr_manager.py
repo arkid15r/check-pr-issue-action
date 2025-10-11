@@ -49,7 +49,7 @@ class TestPrManager:
         pr_manager = PrManager(mock_github_client, mock_config)
 
         message = pr_manager._get_error_message(validation_result)
-        assert message == mock_config.assignee_mismatch_message
+        assert message == mock_config.no_assignee_message
 
     def test_get_error_message_no_assignee(self, mock_github_client, mock_config):
         """Test getting error message for no assignee."""
@@ -59,7 +59,7 @@ class TestPrManager:
         pr_manager = PrManager(mock_github_client, mock_config)
 
         message = pr_manager._get_error_message(validation_result)
-        assert message == mock_config.assignee_mismatch_message
+        assert message == mock_config.no_assignee_message
 
     def test_get_error_message_unknown_reason(self, mock_github_client, mock_config):
         """Test getting error message for unknown reason."""
@@ -68,6 +68,17 @@ class TestPrManager:
 
         message = pr_manager._get_error_message(validation_result)
         assert message == "PR validation failed: Unknown error"
+
+    def test_get_error_message_invalid_branch(self, mock_github_client, mock_config):
+        """Test getting error message for invalid branch."""
+        validation_result = ValidationResult(
+            is_valid=False,
+            reason="PR must target one of the allowed branches: main, develop",
+        )
+        pr_manager = PrManager(mock_github_client, mock_config)
+
+        message = pr_manager._get_error_message(validation_result)
+        assert message == mock_config.invalid_branch_message
 
     def test_post_comment_success(self, mock_github_client, mock_config, mock_pr):
         """Test successful comment posting."""

@@ -1,17 +1,17 @@
-name: 'Check PR Issue Action'
-description: 'Validates that PRs are linked to issues and optionally enforces assignee requirements'
-author: 'arkid15r'
+name: Check PR Issue Action
+description: Validates that PRs are linked to issues and optionally enforces assignee requirements
+author: arkid15r
 branding:
-  icon: 'check-circle'
-  color: 'green'
+  icon: check-circle
+  color: green
 
 inputs:
   skip_users:
-    description: 'Comma-separated list of usernames to skip validation'
+    description: Comma-separated list of usernames to skip validation
     required: false
     default: ''
   require_assignee:
-    description: 'Whether to require issue assignee to match PR author'
+    description: Whether to require issue assignee to match PR author
     required: false
     default: 'false'
   close_pr_on_failure:
@@ -21,20 +21,23 @@ inputs:
   no_issue_message:
     description: 'Error message when PR has no linked issue'
     required: false
-    default: 'This PR must be linked to an issue before it can be merged.'
-  assignee_mismatch_message:
+    default: This PR must be linked to an issue before it can be merged.
+  no_assignee_message:
     description: 'Error message when assignee does not match PR author'
     required: false
-    default: 'The linked issue must be assigned to the PR author before this PR can be merged.'
+    default: The linked issue must be assigned to the PR author before this PR can be merged.
+  target_branches:
+    description: Newline-separated list of target branches to validate against (repository default branch is automatically included)
+    required: false
+    default: ''
+  invalid_branch_message:
+    description: Error message when PR targets an invalid branch
+    required: false
+    default: 'This PR must target one of the allowed branches.'
   github_token:
     description: 'GitHub token for API access'
     required: true
 
-permissions:
-  pull-requests: write
-  issues: read
-  contents: read
-
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
+  using: docker
+  image: Dockerfile

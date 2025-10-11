@@ -56,9 +56,13 @@ class PrManager:
         if validation_result.reason == "No linked issue":
             return self.config.no_issue_message
         elif validation_result.reason == "Assignee mismatch":
-            return self.config.assignee_mismatch_message
+            return self.config.no_assignee_message
         elif validation_result.reason == "Issue has no assignee":
-            return self.config.assignee_mismatch_message
+            return self.config.no_assignee_message
+        elif validation_result.reason and validation_result.reason.startswith(
+            "PR must target one of the allowed branches"
+        ):
+            return self.config.invalid_branch_message
         else:
             return f"PR validation failed: {validation_result.reason}"
 

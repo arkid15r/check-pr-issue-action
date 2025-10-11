@@ -51,6 +51,11 @@ class PrValidator:
             logger.info(f"Skipping validation for user in skip list: {pr.user.login}")
             return ValidationResult(is_valid=True, reason="User in skip list")
 
+        # Validate target branch
+        branch_result = self._validate_target_branch(pr)
+        if not branch_result.is_valid:
+            return branch_result
+
         # Validate issue linking
         issue_result = self._validate_issue_linking(pr)
         if not issue_result.is_valid:
@@ -191,4 +196,40 @@ class PrValidator:
             )
             return ValidationResult(
                 is_valid=False, reason="Assignee mismatch", issue=issue
+            )
+
+    def _validate_target_branch(self, pr: PullRequest) -> ValidationResult:
+        """Validate that PR is targeting an allowed branch."""
+        target_branch = pr.base.ref
+        logger.info(f"PR #{pr.number} is targeting branch: {target_branch}")
+
+        # If no target branches configured, allow all branches (default behavior)
+        if not self.config.target_branches:
+            logger.info("No target branches configured, allowing all branches")
+            return ValidationResult(is_valid=True, reason="No branch restrictions")
+
+        # Get the default branch and add it to allowed branches if not already present
+        try:
+            default_branch = pr.base.repo.default_branch
+            allowed_branches = set(self.config.target_branches)
+            if default_branch not in allowed_branches:
+                allowed_branches.add(default_branch)
+                logger.info(
+                    f"Added default branch '{default_branch}' to allowed branches"
+                )
+        except Exception as e:
+            logger.warning(f"Could not get default branch: {e}")
+            allowed_branches = set(self.config.target_branches)
+
+        # Check if target branch is in the allowed list
+        if target_branch in allowed_branches:
+            logger.info(f"Target branch '{target_branch}' is in allowed list")
+            return ValidationResult(is_valid=True, reason="Target branch allowed")
+        else:
+            logger.warning(
+                f"Target branch '{target_branch}' is not in allowed list: {sorted(allowed_branches)}"
+            )
+            return ValidationResult(
+                is_valid=False,
+                reason=f"PR must target one of the allowed branches: {', '.join(sorted(allowed_branches))}",
             )
