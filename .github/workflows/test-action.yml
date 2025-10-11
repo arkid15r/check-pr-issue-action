@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Test action
-      uses: arkid15r/check-pr-issue-action@debug
+      uses: arkid15r/check-pr-issue-action@test
       with:
         close_pr_on_failure: 'true'
         github_token: ${{ secrets.GITHUB_TOKEN }}
