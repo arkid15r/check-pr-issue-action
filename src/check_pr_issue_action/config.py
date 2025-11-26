@@ -2,6 +2,7 @@
 
 import logging
 import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -52,26 +53,40 @@ class Config:
         value = self._get_input(name, str(default)).lower()
         return value in ("true", "1", "yes", "on")
 
+    def _resolve_file_path(self, file_path: str) -> str:
+        """Resolve file path relative to GitHub workspace if needed."""
+        github_workspace = Path(os.getenv("GITHUB_WORKSPACE", "/github/workspace"))
+        file_path_obj = Path(file_path)
+
+        if file_path_obj.as_posix().startswith("/github/workspace"):
+            return file_path_obj.as_posix()
+
+        if file_path_obj.is_absolute():
+            return file_path_obj.as_posix()
+
+        return str((github_workspace / file_path_obj).resolve())
+
     def _parse_skip_users(self) -> list[str]:
         """Parse skip users from both the skip_users input and skip_users_file_path."""
-        # Parse skip_users input
         users_str = self._get_input("skip_users", "")
         skip_users = [user.strip() for user in users_str.split(",") if user.strip()]
 
-        # Parse skip_users_file_path input
         if file_path := self._get_input("skip_users_file_path", ""):
+            resolved_path = self._resolve_file_path(file_path)
             try:
-                with open(file_path, encoding="utf-8") as file:
+                logger.info(f"Reading skip users from file: {resolved_path}")
+                with open(resolved_path, encoding="utf-8") as file:
                     file_users = [
                         line.strip() for line in file.readlines() if line.strip()
                     ]
                     skip_users.extend(file_users)
             except FileNotFoundError:
-                logger.error(f"Skip users file not found: {file_path}")
+                logger.error(
+                    f"Skip users file not found: {resolved_path} (original path: {file_path})"
+                )
             except Exception as e:
                 logger.error(f"Error reading skip users file: {e}")
 
-        # Remove duplicates and return
         unique_users = sorted(set(skip_users))
         logger.info(f"Skip users configured: {unique_users}")
 
