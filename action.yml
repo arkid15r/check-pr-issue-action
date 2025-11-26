@@ -10,6 +10,10 @@ inputs:
     description: Comma-separated list of usernames to skip validation
     required: false
     default: ''
+  skip_users_file_path:
+    description: Path to a file containing usernames to skip validation (one username per line)
+    required: false
+    default: ''
   require_assignee:
     description: Whether to require issue assignee to match PR author
     required: false

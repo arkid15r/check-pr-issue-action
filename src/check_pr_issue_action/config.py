@@ -53,14 +53,29 @@ class Config:
         return value in ("true", "1", "yes", "on")
 
     def _parse_skip_users(self) -> list[str]:
-        """Parse comma-separated skip users list."""
+        """Parse skip users from both the skip_users input and skip_users_file_path."""
+        # Parse skip_users input
         users_str = self._get_input("skip_users", "")
-        if not users_str:
-            return []
+        skip_users = [user.strip() for user in users_str.split(",") if user.strip()]
 
-        users = [user.strip() for user in users_str.split(",") if user.strip()]
-        logger.info(f"Skip users configured: {users}")
-        return users
+        # Parse skip_users_file_path input
+        if file_path := self._get_input("skip_users_file_path", ""):
+            try:
+                with open(file_path, encoding="utf-8") as file:
+                    file_users = [
+                        line.strip() for line in file.readlines() if line.strip()
+                    ]
+                    skip_users.extend(file_users)
+            except FileNotFoundError:
+                logger.error(f"Skip users file not found: {file_path}")
+            except Exception as e:
+                logger.error(f"Error reading skip users file: {e}")
+
+        # Remove duplicates and return
+        unique_users = sorted(set(skip_users))
+        logger.info(f"Skip users configured: {unique_users}")
+
+        return unique_users
 
     def _parse_target_branches(self) -> list[str]:
         """Parse newline-separated target branches list."""

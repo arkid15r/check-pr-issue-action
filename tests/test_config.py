@@ -88,3 +88,61 @@ class TestConfig:
             config = Config()
             assert config.no_issue_message == "Custom no issue message"
             assert config.no_assignee_message == "Custom assignee message"
+
+    def test_skip_users_file_path_only(self, tmp_path):
+        """Test parsing of skip users from file only."""
+        skip_users_file = tmp_path / "skip_users.txt"
+        skip_users_file.write_text("user1\nuser2\nuser3\n")
+
+        with patch.dict(
+            os.environ,
+            {
+                "INPUT_GITHUB_TOKEN": "test_token",
+                "INPUT_SKIP_USERS_FILE_PATH": str(skip_users_file),
+            },
+        ):
+            config = Config()
+            assert config.skip_users == ["user1", "user2", "user3"]
+
+    def test_skip_users_combined(self, tmp_path):
+        """Test combining skip_users and skip_users_file_path."""
+        skip_users_file = tmp_path / "skip_users.txt"
+        skip_users_file.write_text("user2\nuser3\nuser4\n")
+
+        with patch.dict(
+            os.environ,
+            {
+                "INPUT_GITHUB_TOKEN": "test_token",
+                "INPUT_SKIP_USERS": "user1, user2",
+                "INPUT_SKIP_USERS_FILE_PATH": str(skip_users_file),
+            },
+        ):
+            config = Config()
+            assert sorted(config.skip_users) == ["user1", "user2", "user3", "user4"]
+
+    def test_skip_users_file_not_found(self):
+        """Test handling of a non-existent skip users file."""
+        with patch.dict(
+            os.environ,
+            {
+                "INPUT_GITHUB_TOKEN": "test_token",
+                "INPUT_SKIP_USERS_FILE_PATH": "non_existent_file.txt",
+            },
+        ):
+            config = Config()
+            assert config.skip_users == []
+
+    def test_skip_users_empty_file(self, tmp_path):
+        """Test handling of an empty skip users file."""
+        skip_users_file = tmp_path / "skip_users.txt"
+        skip_users_file.write_text("")
+
+        with patch.dict(
+            os.environ,
+            {
+                "INPUT_GITHUB_TOKEN": "test_token",
+                "INPUT_SKIP_USERS_FILE_PATH": str(skip_users_file),
+            },
+        ):
+            config = Config()
+            assert config.skip_users == []

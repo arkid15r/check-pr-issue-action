@@ -62,3 +62,6 @@ Thumbs.db
 
 # Pre-commit
 .pre-commit-cache/
+
+.github/instructions/snyk_rules.instructions.md
+*.code-workspace
