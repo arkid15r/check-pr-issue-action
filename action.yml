@@ -14,7 +14,7 @@ inputs:
     description: Path to a file containing usernames to skip validation (one username per line)
     required: false
     default: ''
-  check-issue-reference:
+  check_issue_reference:
     description: Whether to allow PRs without a linked issue when the PR description contains a valid closing issue reference
     required: false
     default: 'false'
