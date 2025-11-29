@@ -21,6 +21,7 @@ jobs:
     - name: Test action
       uses: arkid15r/check-pr-issue-action@main
       with:
+        check_issue_reference: 'true'
         close_pr_on_failure: 'true'
         github_token: ${{ secrets.GITHUB_TOKEN }}
         no_assignee_message: 'Test: The linked issue must be assigned to the PR author.'
