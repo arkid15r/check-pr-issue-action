@@ -1,6 +1,7 @@
 """Validation logic for PR-issue requirements."""
 
 import logging
+import re
 
 from github import Github, PullRequest
 from github.Issue import Issue as GitHubIssue
@@ -41,28 +42,31 @@ class PrValidator:
         """
         logger.info(f"Validating PR #{pr.number} by {pr.user.login}")
 
-        # Check if PR author is a bot (always skip)
         if pr.user.type == "Bot":
             logger.info(f"Skipping validation for bot user: {pr.user.login}")
             return ValidationResult(is_valid=True, reason="Bot user")
 
-        # Check if PR author is in skip_users list
         if pr.user.login in self.config.skip_users:
             logger.info(f"Skipping validation for user in skip list: {pr.user.login}")
             return ValidationResult(is_valid=True, reason="User in skip list")
 
-        # Validate target branch
         branch_result = self._validate_target_branch(pr)
         if not branch_result.is_valid:
             return branch_result
 
-        # Validate issue linking
         issue_result = self._validate_issue_linking(pr)
         if not issue_result.is_valid:
-            return issue_result
+            if (
+                self.config.check_issue_reference
+                and issue_result.reason == "No linked issue"
+            ):
+                reference_result = self._validate_issue_reference(pr)
+                if not reference_result.is_valid:
+                    return reference_result
+            else:
+                return issue_result
 
-        # Validate assignee if required
-        if self.config.require_assignee:
+        if self.config.require_assignee and issue_result.issue:
             assignee_result = self._validate_assignee(pr, issue_result.issue)
             if not assignee_result.is_valid:
                 return assignee_result
@@ -72,19 +76,52 @@ class PrValidator:
             is_valid=True, reason="All validations passed", issue=issue_result.issue
         )
 
+    def _validate_issue_reference(self, pr: PullRequest) -> ValidationResult:
+        """Validate that PR description contains a valid closing issue reference."""
+        description = pr.body or ""
+        if not description.strip():
+            logger.warning(
+                f"PR #{pr.number} has no linked issue and empty description for reference check"
+            )
+            return ValidationResult(
+                is_valid=False,
+                reason="No linked issue and no valid closing issue reference in PR description",
+            )
+
+        pattern = re.compile(
+            r"\b(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b"
+            r"(?:\s+|:\s*)"
+            r"(?:#[0-9]+|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+)",
+            re.IGNORECASE,
+        )
+
+        if pattern.search(description):
+            logger.info(
+                f"PR #{pr.number} has a valid closing issue reference in description"
+            )
+            return ValidationResult(
+                is_valid=True,
+                reason="Valid closing issue reference found in PR description",
+            )
+
+        logger.warning(
+            f"PR #{pr.number} has no linked issue and no valid closing issue reference in description"
+        )
+        return ValidationResult(
+            is_valid=False,
+            reason="No linked issue and no valid closing issue reference in PR description",
+        )
+
     def _validate_issue_linking(self, pr: PullRequest) -> ValidationResult:
         """Validate that PR is linked to an issue using GraphQL API."""
         try:
-            # Get linked issues using GraphQL API
             linked_issues = self._get_linked_issues_via_graphql(pr)
 
             if linked_issues is None:
-                # GraphQL error occurred
                 return ValidationResult(
                     is_valid=False, reason="Error checking issue linking"
                 )
             elif linked_issues:
-                # Get the first linked issue
                 issue_number = linked_issues[0]["number"]
                 repo = pr.base.repo
                 issue = repo.get_issue(issue_number)
@@ -127,7 +164,6 @@ class PrValidator:
             }
             """
 
-            # Extract repository owner and name from PR
             repo = pr.base.repo
             owner, repo_name = repo.full_name.split("/")
 
@@ -137,7 +173,6 @@ class PrValidator:
                 "pullRequestNumber": pr.number,
             }
 
-            # Make GraphQL request using PyGithub's requester
             requester = self.github._Github__requester
             headers, response = requester.requestJsonAndCheck(
                 "POST",
@@ -149,7 +184,6 @@ class PrValidator:
                 logger.error(f"GraphQL errors: {response['errors']}")
                 return None
 
-            # Extract linked issues from response
             data = response.get("data", {})
             repository = data.get("repository", {})
             pull_request = repository.get("pullRequest", {})
@@ -162,7 +196,6 @@ class PrValidator:
             logger.info(f"closingIssuesReferences: {closing_issues_refs}")
             logger.info(f"edges: {edges}")
 
-            # Extract nodes from edges
             linked_issues = [edge.get("node", {}) for edge in edges]
 
             logger.info(
@@ -211,12 +244,10 @@ class PrValidator:
         target_branch = pr.base.ref
         logger.info(f"PR #{pr.number} is targeting branch: {target_branch}")
 
-        # If no target branches configured, allow all branches (default behavior)
         if not self.config.target_branches:
             logger.info("No target branches configured, allowing all branches")
             return ValidationResult(is_valid=True, reason="No branch restrictions")
 
-        # Get the default branch and add it to allowed branches if not already present
         try:
             default_branch = pr.base.repo.default_branch
             allowed_branches = set(self.config.target_branches)
@@ -229,7 +260,6 @@ class PrValidator:
             logger.warning(f"Could not get default branch: {e}")
             allowed_branches = set(self.config.target_branches)
 
-        # Check if target branch is in the allowed list
         if target_branch in allowed_branches:
             logger.info(f"Target branch '{target_branch}' is in allowed list")
             return ValidationResult(is_valid=True, reason="Target branch allowed")

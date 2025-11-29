@@ -14,6 +14,10 @@ inputs:
     description: Path to a file containing usernames to skip validation (one username per line)
     required: false
     default: ''
+  check-issue-reference:
+    description: Whether to allow PRs without a linked issue when the PR description contains a valid closing issue reference
+    required: false
+    default: 'false'
   require_assignee:
     description: Whether to require issue assignee to match PR author
     required: false

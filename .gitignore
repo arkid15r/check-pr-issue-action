@@ -63,5 +63,6 @@ Thumbs.db
 # Pre-commit
 .pre-commit-cache/
 
+.cursor/rules/snyk_rules.mdc
 .github/instructions/snyk_rules.instructions.md
 *.code-workspace
