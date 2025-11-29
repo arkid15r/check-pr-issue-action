@@ -84,22 +84,54 @@ class TestPrValidator:
         assert result.reason == "No linked issue"
 
     def test_validate_pr_no_linked_issue_with_description_reference_enabled_and_valid(
-        self, mock_github_client, mock_config, mock_pr
+        self, mock_github_client, mock_config, mock_pr, mock_issue
     ):
         """When no linked issue and check_issue_reference is enabled, valid description reference should pass."""
         mock_config.check_issue_reference = True
+        mock_config.require_assignee = False
         mock_pr.body = "This PR fixes #123"
         mock_pr.base.repo.full_name = "testowner/testrepo"
-        mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
-            {},
-            {
-                "data": {
-                    "repository": {
-                        "pullRequest": {"closingIssuesReferences": {"edges": []}}
-                    }
-                }
-            },
+
+        def graphql_side_effect(*args, **kwargs):
+            input_data = kwargs.get("input", {})
+            query = input_data.get("query", "")
+            variables = input_data.get("variables", {})
+
+            if "GetLinkedIssues" in query:
+                return (
+                    {},
+                    {
+                        "data": {
+                            "repository": {
+                                "pullRequest": {
+                                    "closingIssuesReferences": {"edges": []}
+                                }
+                            }
+                        }
+                    },
+                )
+            elif "GetIssue" in query and variables.get("issueNumber") == 123:
+                return (
+                    {},
+                    {
+                        "data": {
+                            "repository": {
+                                "issue": {
+                                    "number": 123,
+                                    "title": "Test Issue",
+                                    "url": "https://github.com/testowner/testrepo/issues/123",
+                                    "assignees": {"edges": []},
+                                }
+                            }
+                        }
+                    },
+                )
+            return ({}, {"data": {}})
+
+        mock_github_client._Github__requester.requestJsonAndCheck.side_effect = (
+            graphql_side_effect
         )
+        mock_pr.base.repo.get_issue.return_value = mock_issue
 
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
@@ -134,11 +166,12 @@ class TestPrValidator:
             == "No linked issue and no valid closing issue reference in PR description"
         )
 
-    def test_validate_pr_no_linked_issue_with_description_reference_enabled_and_cross_repo(
+    def test_validate_pr_no_linked_issue_with_invalid_reference_format(
         self, mock_github_client, mock_config, mock_pr
     ):
-        """Valid cross-repo closing reference in description should be accepted when no linked issue."""
+        """Invalid reference format in description should be rejected."""
         mock_config.check_issue_reference = True
+        mock_config.require_assignee = False
         mock_pr.body = "Resolves some-org/some-repo#42"
         mock_pr.base.repo.full_name = "testowner/testrepo"
         mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
@@ -155,8 +188,159 @@ class TestPrValidator:
         validator = PrValidator(mock_github_client, mock_config)
         result = validator.validate_pr(mock_pr)
 
+        assert result.is_valid is False
+        assert (
+            result.reason
+            == "No linked issue and no valid closing issue reference in PR description"
+        )
+
+    def test_validate_pr_invalid_reference_format_with_require_assignee(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Invalid reference format should fail regardless of require_assignee setting."""
+        mock_config.check_issue_reference = True
+        mock_config.require_assignee = True
+        mock_pr.body = "Resolves some-org/some-repo#42"
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+        mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
+            {
+                "data": {
+                    "repository": {
+                        "pullRequest": {"closingIssuesReferences": {"edges": []}}
+                    }
+                }
+            },
+        )
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is False
+        assert (
+            result.reason
+            == "No linked issue and no valid closing issue reference in PR description"
+        )
+
+    def test_validate_pr_description_reference_with_assignee_check(
+        self, mock_github_client, mock_config, mock_pr, mock_issue_with_assignee
+    ):
+        """When description reference exists and require_assignee is enabled, should fetch issue and validate assignee."""
+        mock_config.check_issue_reference = True
+        mock_config.require_assignee = True
+        mock_pr.body = "This PR fixes #456"
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+
+        def graphql_side_effect(*args, **kwargs):
+            input_data = kwargs.get("input", {})
+            query = input_data.get("query", "")
+            variables = input_data.get("variables", {})
+
+            if "GetLinkedIssues" in query:
+                return (
+                    {},
+                    {
+                        "data": {
+                            "repository": {
+                                "pullRequest": {
+                                    "closingIssuesReferences": {"edges": []}
+                                }
+                            }
+                        }
+                    },
+                )
+            elif "GetIssue" in query and variables.get("issueNumber") == 456:
+                return (
+                    {},
+                    {
+                        "data": {
+                            "repository": {
+                                "issue": {
+                                    "number": 456,
+                                    "title": "Test Issue",
+                                    "url": "https://github.com/testowner/testrepo/issues/456",
+                                    "assignees": {
+                                        "edges": [{"node": {"login": "testuser"}}]
+                                    },
+                                }
+                            }
+                        }
+                    },
+                )
+            return ({}, {"data": {}})
+
+        mock_github_client._Github__requester.requestJsonAndCheck.side_effect = (
+            graphql_side_effect
+        )
+        mock_pr.base.repo.get_issue.return_value = mock_issue_with_assignee
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
         assert result.is_valid is True
         assert result.reason == "All validations passed"
+
+    def test_validate_pr_description_reference_with_assignee_mismatch(
+        self,
+        mock_github_client,
+        mock_config,
+        mock_pr,
+        mock_issue_with_different_assignee,
+    ):
+        """When description reference exists and assignee doesn't match, should fail validation."""
+        mock_config.check_issue_reference = True
+        mock_config.require_assignee = True
+        mock_pr.body = "This PR fixes #456"
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+
+        def graphql_side_effect(*args, **kwargs):
+            input_data = kwargs.get("input", {})
+            query = input_data.get("query", "")
+            variables = input_data.get("variables", {})
+
+            if "GetLinkedIssues" in query:
+                return (
+                    {},
+                    {
+                        "data": {
+                            "repository": {
+                                "pullRequest": {
+                                    "closingIssuesReferences": {"edges": []}
+                                }
+                            }
+                        }
+                    },
+                )
+            elif "GetIssue" in query and variables.get("issueNumber") == 456:
+                return (
+                    {},
+                    {
+                        "data": {
+                            "repository": {
+                                "issue": {
+                                    "number": 456,
+                                    "title": "Test Issue",
+                                    "url": "https://github.com/testowner/testrepo/issues/456",
+                                    "assignees": {
+                                        "edges": [{"node": {"login": "differentuser"}}]
+                                    },
+                                }
+                            }
+                        }
+                    },
+                )
+            return ({}, {"data": {}})
+
+        mock_github_client._Github__requester.requestJsonAndCheck.side_effect = (
+            graphql_side_effect
+        )
+        mock_pr.base.repo.get_issue.return_value = mock_issue_with_different_assignee
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is False
+        assert result.reason == "Assignee mismatch"
 
     def test_validate_pr_issue_linking_error(
         self, mock_github_client, mock_config, mock_pr

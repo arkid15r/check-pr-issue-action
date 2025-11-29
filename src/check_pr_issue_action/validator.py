@@ -17,10 +17,12 @@ class ValidationResult:
         is_valid: bool,
         reason: str | None = None,
         issue: GitHubIssue | None = None,
+        issue_number: int | None = None,
     ):
         self.is_valid = is_valid
         self.reason = reason
         self.issue = issue
+        self.issue_number = issue_number
 
 
 class PrValidator:
@@ -55,25 +57,32 @@ class PrValidator:
             return branch_result
 
         issue_result = self._validate_issue_linking(pr)
-        if not issue_result.is_valid:
-            if (
-                self.config.check_issue_reference
-                and issue_result.reason == "No linked issue"
-            ):
-                reference_result = self._validate_issue_reference(pr)
-                if not reference_result.is_valid:
-                    return reference_result
-            else:
-                return issue_result
+        issue = issue_result.issue
 
-        if self.config.require_assignee and issue_result.issue:
-            assignee_result = self._validate_assignee(pr, issue_result.issue)
+        if not issue and self.config.check_issue_reference:
+            reference_result = self._validate_issue_reference(pr)
+            if reference_result.is_valid and reference_result.issue_number:
+                issue = self._get_issue_by_number(pr, reference_result.issue_number)
+
+        if not issue:
+            if issue_result.reason and issue_result.reason != "No linked issue":
+                return ValidationResult(is_valid=False, reason=issue_result.reason)
+
+            if self.config.check_issue_reference:
+                return ValidationResult(
+                    is_valid=False,
+                    reason="No linked issue and no valid closing issue reference in PR description",
+                )
+            return ValidationResult(is_valid=False, reason="No linked issue")
+
+        if self.config.require_assignee:
+            assignee_result = self._validate_assignee(pr, issue)
             if not assignee_result.is_valid:
                 return assignee_result
 
         logger.info(f"PR #{pr.number} validation passed")
         return ValidationResult(
-            is_valid=True, reason="All validations passed", issue=issue_result.issue
+            is_valid=True, reason="All validations passed", issue=issue
         )
 
     def _validate_issue_reference(self, pr: PullRequest) -> ValidationResult:
@@ -91,17 +100,20 @@ class PrValidator:
         pattern = re.compile(
             r"\b(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b"
             r"(?:\s+|:\s*)"
-            r"(?:#[0-9]+|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+)",
+            r"#([0-9]+)",
             re.IGNORECASE,
         )
 
-        if pattern.search(description):
+        match = pattern.search(description)
+        if match:
+            issue_number = int(match.group(2))
             logger.info(
                 f"PR #{pr.number} has a valid closing issue reference in description"
             )
             return ValidationResult(
                 is_valid=True,
                 reason="Valid closing issue reference found in PR description",
+                issue_number=issue_number,
             )
 
         logger.warning(
@@ -207,6 +219,72 @@ class PrValidator:
 
         except Exception as e:
             logger.error(f"Error fetching linked issues via GraphQL: {e}")
+            return None
+
+    def _get_issue_by_number(
+        self, pr: PullRequest, issue_number: int
+    ) -> GitHubIssue | None:
+        """Get an issue by number from the same repository using GraphQL API."""
+        try:
+            query = """
+            query GetIssue($owner: String!, $repo: String!, $issueNumber: Int!) {
+              repository(owner: $owner, name: $repo) {
+                issue(number: $issueNumber) {
+                  number
+                  title
+                  url
+                  assignees(first: 10) {
+                    edges {
+                      node {
+                        login
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+
+            repo = pr.base.repo
+            owner, repo_name = repo.full_name.split("/")
+
+            variables = {
+                "owner": owner,
+                "repo": repo_name,
+                "issueNumber": issue_number,
+            }
+
+            requester = self.github._Github__requester
+            _, response = requester.requestJsonAndCheck(
+                "POST",
+                "/graphql",
+                input={"query": query, "variables": variables},
+            )
+
+            if "errors" in response:
+                logger.error(
+                    f"GraphQL errors when fetching issue #{issue_number}: {response['errors']}"
+                )
+                return None
+
+            data = response.get("data", {})
+            repository = data.get("repository", {})
+            issue_data = repository.get("issue")
+
+            if not issue_data:
+                logger.warning(
+                    f"Issue #{issue_number} not found in repository {repo.full_name}"
+                )
+                return None
+
+            issue = repo.get_issue(issue_number)
+            logger.info(
+                f"Successfully fetched issue #{issue_number} for assignee validation"
+            )
+            return issue
+
+        except Exception as e:
+            logger.error(f"Error fetching issue #{issue_number} via GraphQL: {e}")
             return None
 
     def _validate_assignee(

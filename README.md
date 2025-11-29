@@ -4,7 +4,8 @@ A GitHub Action that validates PR-issue relationships and optionally enforces as
 
 ## Features
 
-- **Mandatory Issue Linking**: Ensures every PR is linked to an issue via GitHub API
+- **Optional Issue Linking**: Ensures every PR is linked to an issue via GitHub API
+- **Optional PR Description Check**: Fallback validation that checks PR description for closing issue references (e.g., "Closes #123")
 - **Optional Assignee Validation**: Configurable check that issue assignee matches PR author
 - **Bot Support**: Automatically skips validation for bot-authored PRs
 - **User Whitelist**: Configurable list of users whose PRs can bypass all checks
@@ -40,6 +41,7 @@ jobs:
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     skip_users: 'admin,maintainer'
+    check_issue_reference: 'true'
     require_assignee: 'true'
     close_pr_on_failure: 'false'
     no_issue_message: 'Please link this PR to an issue before merging.'
@@ -52,10 +54,36 @@ jobs:
 |-------|-------------|----------|---------|
 | `github_token` | GitHub token for API access | Yes | - |
 | `skip_users` | Comma-separated list of usernames to skip validation | No | `''` |
+| `check_issue_reference` | Whether to allow PRs without a linked issue when the PR description contains a valid closing issue reference | No | `false` |
 | `require_assignee` | Whether to require issue assignee to match PR author | No | `false` |
 | `close_pr_on_failure` | Whether to close PR when validation fails | No | `true` |
 | `no_issue_message` | Error message when PR has no linked issue | No | `'This PR must be linked to an issue before it can be merged.'` |
 | `assignee_mismatch_message` | Error message when assignee doesn't match PR author | No | `'The linked issue must be assigned to the PR author before this PR can be merged.'` |
+
+### PR Description Reference Check
+
+When `check_issue_reference` is enabled, the action will check the PR description for valid closing issue references if no linked issue is found via the GitHub API. This is useful when PRs reference issues in their description but aren't formally linked.
+
+**Supported Keywords** (case-insensitive):
+
+- `close`, `closes`, `closed`
+- `fix`, `fixes`, `fixed`
+- `resolve`, `resolves`, `resolved`
+
+**Valid Formats**:
+
+- `Closes #123` - References an issue in the same repository
+- `Resolves #10, resolves #123` - Multiple issues in one description
+- `Closes: #10` - Optional colon after keyword
+- `CLOSES #10` - Case-insensitive matching
+
+**Example PR Description**:
+
+```text
+This PR implements the new feature requested in the issue.
+
+Closes #123
+```
 
 ## Required Permissions
 
@@ -139,7 +167,7 @@ make check
 
 ### Project Structure
 
-```
+```text
 check-pr-issue-action/
 ├── src/check_pr_issue_action/     # Main package code
 │   ├── __init__.py               # Package initialization
@@ -182,8 +210,9 @@ The action is built on **Alpine Linux** for a smaller, more secure container ima
 1. **Bot Detection**: Automatically skips validation for any PR authored by a bot user
 2. **Skip Users**: Bypasses validation for users in the `skip_users` list
 3. **Issue Linking**: Uses GitHub API to check if PR is linked to an issue
-4. **Assignee Validation**: If enabled, verifies that the issue assignee matches the PR author
-5. **Enforcement**: Either closes the PR or posts a warning message based on configuration
+4. **PR Description Fallback**: If `check_issue_reference` is enabled and no linked issue is found, checks the PR description for valid closing keywords (e.g., "Closes #123", "Fixes owner/repo#456"). Supports keywords: `close`, `closes`, `closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves`, `resolved`
+5. **Assignee Validation**: If enabled, verifies that the issue assignee matches the PR author
+6. **Enforcement**: Either closes the PR or posts a warning message based on configuration
 
 ## License
 
