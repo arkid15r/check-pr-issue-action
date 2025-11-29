@@ -75,6 +75,28 @@ class TestConfig:
             assert config.require_assignee is True
             assert config.close_pr_on_failure is False
 
+    def test_check_issue_reference_input(self):
+        """Test parsing of check_issue_reference input."""
+        with patch.dict(
+            os.environ,
+            {
+                "INPUT_GITHUB_TOKEN": "test_token",
+                "INPUT_CHECK_ISSUE_REFERENCE": "true",
+            },
+        ):
+            config = Config()
+            assert config.check_issue_reference is True
+
+        with patch.dict(
+            os.environ,
+            {
+                "INPUT_GITHUB_TOKEN": "test_token",
+                "INPUT_CHECK_ISSUE_REFERENCE": "false",
+            },
+        ):
+            config = Config()
+            assert config.check_issue_reference is False
+
     def test_custom_messages(self):
         """Test custom error messages."""
         with patch.dict(

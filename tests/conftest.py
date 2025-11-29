@@ -12,6 +12,7 @@ def mock_config():
     """Create a mock configuration for testing."""
     config = Mock(spec=Config)
     config.skip_users = ["testuser1", "testuser2"]
+    config.check_issue_reference = False
     config.require_assignee = True
     config.close_pr_on_failure = True
     config.no_issue_message = "No issue message"
@@ -36,6 +37,7 @@ def mock_pr():
     pr.user.type = "User"
     pr.base.ref = "main"
     pr.base.repo.default_branch = "main"
+    pr.body = "This is a test PR"
     return pr
 
 

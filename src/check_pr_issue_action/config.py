@@ -14,6 +14,9 @@ class Config:
         """Initialize configuration from environment variables."""
         self.github_token = self._get_required_input("github_token")
         self.skip_users = self._parse_skip_users()
+        self.check_issue_reference = self._get_boolean_input(
+            "check_issue_reference", False
+        )
         self.require_assignee = self._get_boolean_input("require_assignee", False)
         self.close_pr_on_failure = self._get_boolean_input("close_pr_on_failure", True)
         self.no_issue_message = self._get_input(
@@ -32,6 +35,7 @@ class Config:
 
         logger.info(
             f"Configuration loaded: skip_users={self.skip_users}, "
+            f"check_issue_reference={self.check_issue_reference}, "
             f"require_assignee={self.require_assignee}, "
             f"close_pr_on_failure={self.close_pr_on_failure}, "
             f"target_branches={self.target_branches}"

@@ -83,6 +83,81 @@ class TestPrValidator:
         assert result.is_valid is False
         assert result.reason == "No linked issue"
 
+    def test_validate_pr_no_linked_issue_with_description_reference_enabled_and_valid(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """When no linked issue and check_issue_reference is enabled, valid description reference should pass."""
+        mock_config.check_issue_reference = True
+        mock_pr.body = "This PR fixes #123"
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+        mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
+            {
+                "data": {
+                    "repository": {
+                        "pullRequest": {"closingIssuesReferences": {"edges": []}}
+                    }
+                }
+            },
+        )
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is True
+        assert result.reason == "All validations passed"
+
+    def test_validate_pr_no_linked_issue_with_description_reference_enabled_and_invalid(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """When no linked issue and check_issue_reference is enabled, invalid description reference should fail."""
+        mock_config.check_issue_reference = True
+        mock_pr.body = "This PR references issue #123 but without closing keyword"
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+        mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
+            {
+                "data": {
+                    "repository": {
+                        "pullRequest": {"closingIssuesReferences": {"edges": []}}
+                    }
+                }
+            },
+        )
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is False
+        assert (
+            result.reason
+            == "No linked issue and no valid closing issue reference in PR description"
+        )
+
+    def test_validate_pr_no_linked_issue_with_description_reference_enabled_and_cross_repo(
+        self, mock_github_client, mock_config, mock_pr
+    ):
+        """Valid cross-repo closing reference in description should be accepted when no linked issue."""
+        mock_config.check_issue_reference = True
+        mock_pr.body = "Resolves some-org/some-repo#42"
+        mock_pr.base.repo.full_name = "testowner/testrepo"
+        mock_github_client._Github__requester.requestJsonAndCheck.return_value = (
+            {},
+            {
+                "data": {
+                    "repository": {
+                        "pullRequest": {"closingIssuesReferences": {"edges": []}}
+                    }
+                }
+            },
+        )
+
+        validator = PrValidator(mock_github_client, mock_config)
+        result = validator.validate_pr(mock_pr)
+
+        assert result.is_valid is True
+        assert result.reason == "All validations passed"
+
     def test_validate_pr_issue_linking_error(
         self, mock_github_client, mock_config, mock_pr
     ):
