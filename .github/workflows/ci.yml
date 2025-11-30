@@ -96,7 +96,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/check-pr-issue-action:cache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/check-pr-issue-action:cache,mode=max
