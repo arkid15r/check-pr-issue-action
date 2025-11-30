@@ -47,5 +47,5 @@ inputs:
     required: true
 
 runs:
-  using: docker
-  image: Dockerfile
+  using: 'docker'
+  image: 'ghcr.io/arkid15r/check-pr-issue-action:latest'
