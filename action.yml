@@ -48,4 +48,4 @@ inputs:
 
 runs:
   using: 'docker'
-  image: 'docker://ghcr.io/arkid15r/check-pr-issue-action:latest'
+  image: 'docker://ghcr.io/arkid15r/check-pr-issue-action/check-pr-issue-action:latest'
