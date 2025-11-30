@@ -17,7 +17,7 @@ A GitHub Action that validates PR-issue relationships and optionally enforces as
 ### Basic Usage
 
 ```yaml
-name: Check PR Issue
+name: Test PR Issue
 on:
   pull_request:
     types:
