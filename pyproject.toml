@@ -14,7 +14,7 @@ PyGithub = "1.59.1"
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 pre-commit = "^4.5.0"
-ruff = "^0.11.12"
+ruff = "^0.14.9"
 
 [tool.poetry.scripts]
 check-pr-issue-action = "check_pr_issue_action.main:main"
