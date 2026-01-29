@@ -48,8 +48,10 @@ class PrValidator:
             logger.info(f"Skipping validation for bot user: {pr.user.login}")
             return ValidationResult(is_valid=True, reason="Bot user")
 
-        if pr.user.login in self.config.skip_users:
-            logger.info(f"Skipping validation for user in skip list: {pr.user.login}")
+        if pr.user.login.lower() in self.config.skip_users:
+            logger.info(
+                f"Skipping validation for user in skip list: {pr.user.login.lower()}"
+            )
             return ValidationResult(is_valid=True, reason="User in skip list")
 
         branch_result = self._validate_target_branch(pr)
