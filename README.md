@@ -1,5 +1,10 @@
 # Check PR Issue Action
 
+> [!WARNING]
+> **This repository is archived.** No further maintenance or support is expected.
+>
+> Use the successor action: [check-contribution-action](https://github.com/arkid15r/check-contribution-action/).
+
 A GitHub Action that validates PR-issue relationships and optionally enforces assignment requirements.
 
 ## Features
